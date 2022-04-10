@@ -1,6 +1,7 @@
 from io import TextIOWrapper
 import math
 from random import choices, randint, random
+from turtle import right
 
 class Algorithm:
     
@@ -60,9 +61,15 @@ class Algorithm:
         a, b, c = self.FUNCTION_PARAMS
         return 1.0 * a * (x**2) + b * x + c
     
+    # Returneaza probabilitatea de selectie a fiecarui cromozon (suma probabilitatilor este 1)
+    def getPopulationSelectionProbability(self, population):
+        functionValues = [self.getFunctionValue(self.getValue(chromosome)) for chromosome in population]
+        sumOfFunctionValues = sum(functionValues)
+        return [value / sumOfFunctionValues for value in functionValues]
+    
     # Returneaza o pereche de cromozomi din populatie luand in calcul valorile functiei
-    def selectPairOfChromosomes(self, population, functionValues):
-        return choices(population, weights=functionValues, k=2)
+    def selectPairOfChromosomes(self, population, selectionProbability):
+        return choices(population, weights=selectionProbability, k=2)
 
     # Returneaza cromozonii rezultati prin incrucisarea a 2 cromozomi la un punct random 
     # (ia inceputul primului si finalul celui de-al doilea si invers)
@@ -91,11 +98,75 @@ class Algorithm:
             value = self.getValue(chromosome)
             outputFile.write("{0:>2}: {1:<25} x = {2:<10} f = {3}\n".format(i, self.toString(chromosome), round(value, 6), self.getFunctionValue(value)))
             
-                    
-    def run(self, outputPath):
+    def printPopulationSelectionProbabilit(self, probabilities, outputFile:TextIOWrapper):
+        for i, probability in enumerate(probabilities):
+            outputFile.write("{0:>2}: probabilitate = {1}\n".format(i, probability))
+            
+    def printProbabilityIntervals(self, probabilityIntervals, outputFile:TextIOWrapper):   
+        for value in probabilityIntervals:
+            outputFile.write("{0}\n".format(value))
+    
+    # Ruleaza algoritmul pentru numarul de pasi specificati si printeaza in fisierul dat informatiile
+    def run(self, outputPath, isElitist=True):
         with open(outputPath, "w+") as outputFile:
+            # Generam prima populatie random
             population = self.generateRandomPopulation()
+            outputFile.write("Populatie initiala\n")
             self.printPopulation(population, outputFile)
+            outputFile.write("\n")
+            for step in range(1, self.NUMBER_OF_STEPS):
+                # Generam noua populatie
+                # probabilitatea e calculata in functie de suma totala a cromozonilor
+                probabilities = self.getPopulationSelectionProbability(population)
+                if step == 1:
+                    outputFile.write("Probabilitati selectie\n")
+                    self.printPopulationSelectionProbabilit(probabilities, outputFile)
+                    outputFile.write("\n")
+                    
+                # intervalele sunt sume partiale pe probabilitati, suma totala este mereu 1 pentru ca sunt procente
+                currentSum = 0.0
+                probabilityIntervals = [currentSum]
+                for probability in probabilities:
+                    currentSum += probability
+                    probabilityIntervals.append(currentSum)
+                
+                if step == 1:
+                    outputFile.write("Intervale probabilitati selectie\n")
+                    self.printProbabilityIntervals(probabilityIntervals, outputFile)
+                    outputFile.write("\n")
+                
+                selectedChromosomes = [] 
+                if isElitist:
+                    # daca este elitist pastram cel mai bun cromozon la fiecare pas
+                    maxProbability = max(probabilities)
+                    i = probabilities.index(maxProbability)
+                    selectedChromosomes.append(population[i])
+                    if step == 1:
+                        outputFile.write("Criteriu elitist: Selectam cromozomul {0}\n".format(i+1))
+                
+                chromosomesToSelect = self.CHROMOSOME_LENGTH - len(selectedChromosomes)
+                for i in range(chromosomesToSelect):
+                    r = random()
+                    # caut binar intervalul in care se afla r
+                    left = 0
+                    right = len(probabilityIntervals) - 1
+                    while left <= right:
+                        mid = (left + right) // 2
+                        if (probabilityIntervals[mid] < r):
+                            left = mid + 1
+                        else:
+                            right = mid - 1
+                    if step == 1:
+                        outputFile.write("random = {0}: Selectam cromozomul {1}\n".format(round(r, 10), right+1))
+                    selectedChromosomes.append(population[right])
+                    
+                population = selectedChromosomes
+                if step == 1:
+                    outputFile.write("\nDupa selectie\n")
+                    self.printPopulation(population, outputFile)
+
+                
+                
 
                 
             
