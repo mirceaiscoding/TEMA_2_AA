@@ -79,6 +79,15 @@ class Algorithm:
         newChromosome2 = chromosomeB[:crossoverPoint] + chromosomeA[crossoverPoint:]
         return crossoverPoint, newChromosome1, newChromosome2
     
+    # Returneaza punctul de rupere si cromozonii rezultati prin incrucisarea a 3 cromozomi la un punct random 
+    def threeWayCrossoverChromosomes(self, chromosomeA, chromosomeB, chromosomeC):
+        # punctul la care se taie cromozomii, ales random
+        crossoverPoint = randint(1, self.CHROMOSOME_LENGTH-1)
+        newChromosome1 = chromosomeA[:crossoverPoint] + chromosomeB[crossoverPoint:]
+        newChromosome2 = chromosomeB[:crossoverPoint] + chromosomeC[crossoverPoint:]
+        newChromosome3 = chromosomeC[:crossoverPoint] + chromosomeA[crossoverPoint:]
+        return crossoverPoint, newChromosome1, newChromosome2, newChromosome3
+    
     # Returneaza indicii cromozonilor modificati
     def mutateChromosomes(self, population):
         modified = set()
@@ -192,25 +201,42 @@ class Algorithm:
                 
                 # cat timp avem 2 cromozomi de incrucisat
                 while len(toCrossover) >= 2:
-                    # selectez 2 random si ii scot din populatie
-                    indexA, a = toCrossover[randint(0, len(toCrossover)-1)]
-                    toCrossover.remove((indexA, a))
-                    indexB, b = toCrossover[randint(0, len(toCrossover)-1)]
-                    toCrossover.remove((indexB, b))
-                    
-                    # adaug cromozonii rezultati dupa incrucisare
-                    crossoverPoint, mutatedA, mutatedB = self.crossoverChromosomes(a, b)
-                    population.append(mutatedA)
-                    population.append(mutatedB)
-                    
-                    if step == 1:
-                        outputFile.write("\nRecombinare dintre cromozonul {0} si cromozonul {1}:\n".format(indexA+1, indexB+1))
-                        outputFile.write(f"{self.toString(a)} {self.toString(b)} punct {str(crossoverPoint)}\n")
-                        outputFile.write(f"Rezultat {self.toString(mutatedA)} {self.toString(mutatedB)}\n")
+                    if len(toCrossover) == 3:
+                        # 3 way crossover
+                        indexA, a = toCrossover[0]
+                        indexB, b = toCrossover[1]
+                        indexC, c = toCrossover[2]
+                        toCrossover.clear()
+                        
+                        crossoverPoint, mutatedA, mutatedB, mutatedC = self.threeWayCrossoverChromosomes(a, b, c)
+                        population.append(mutatedA)
+                        population.append(mutatedB)
+                        population.append(mutatedC)
+                                                
+                        if step == 1:
+                            outputFile.write("\nRecombinare dintre cromozonul {0}, {1} si {2}:\n".format(indexA+1, indexB+1, indexC+1))
+                            outputFile.write(f"{self.toString(a)} {self.toString(b)} {self.toString(c)} punct {str(crossoverPoint)}\n")
+                            outputFile.write(f"Rezultat {self.toString(mutatedA)} {self.toString(mutatedB)} {self.toString(mutatedC)}\n")
 
-                if len(toCrossover) == 1:
-                    i, chromosome = toCrossover[0]
-                    population.append(chromosome)
+                        
+                    else:
+                        # selectez 2 random si ii scot din populatie
+                        indexA, a = toCrossover[randint(0, len(toCrossover)-1)]
+                        toCrossover.remove((indexA, a))
+                        indexB, b = toCrossover[randint(0, len(toCrossover)-1)]
+                        toCrossover.remove((indexB, b))
+                        
+                        # adaug cromozonii rezultati dupa incrucisare
+                        crossoverPoint, mutatedA, mutatedB = self.crossoverChromosomes(a, b)
+                        population.append(mutatedA)
+                        population.append(mutatedB)
+                        
+                        if step == 1:
+                            outputFile.write("\nRecombinare dintre cromozonul {0} si cromozonul {1}:\n".format(indexA+1, indexB+1))
+                            outputFile.write(f"{self.toString(a)} {self.toString(b)} punct {str(crossoverPoint)}\n")
+                            outputFile.write(f"Rezultat {self.toString(mutatedA)} {self.toString(mutatedB)}\n")
+
+
 
                 if step == 1:
                     outputFile.write("\nDupa recombinare\n")
