@@ -1,7 +1,6 @@
 from io import TextIOWrapper
 import math
 from random import choices, randint, random
-from turtle import right
 
 class Algorithm:
     
@@ -71,14 +70,14 @@ class Algorithm:
     def selectPairOfChromosomes(self, population, selectionProbability):
         return choices(population, weights=selectionProbability, k=2)
 
-    # Returneaza cromozonii rezultati prin incrucisarea a 2 cromozomi la un punct random 
+    # Returneaza punctul de rupere si cromozonii rezultati prin incrucisarea a 2 cromozomi la un punct random 
     # (ia inceputul primului si finalul celui de-al doilea si invers)
     def crossoverChromosomes(self, chromosomeA, chromosomeB):
         # punctul la care se taie cromozomii, ales random
         crossoverPoint = randint(1, self.CHROMOSOME_LENGTH-1)
         newChromosome1 = chromosomeA[:crossoverPoint] + chromosomeB[crossoverPoint:]
         newChromosome2 = chromosomeB[:crossoverPoint] + chromosomeA[crossoverPoint:]
-        return newChromosome1, newChromosome2
+        return crossoverPoint, newChromosome1, newChromosome2
     
     # Returneaza indicii cromozonilor modificati
     def mutateChromosomes(self, population):
@@ -96,11 +95,11 @@ class Algorithm:
     def printPopulation(self, population, outputFile:TextIOWrapper):
         for i, chromosome in enumerate(population):
             value = self.getValue(chromosome)
-            outputFile.write("{0:>2}: {1:<25} x = {2:<10} f = {3}\n".format(i, self.toString(chromosome), round(value, 6), self.getFunctionValue(value)))
+            outputFile.write("{0:>2}: {1:<25} x = {2:<10} f = {3}\n".format(i+1, self.toString(chromosome), round(value, 6), self.getFunctionValue(value)))
             
     def printPopulationSelectionProbabilit(self, probabilities, outputFile:TextIOWrapper):
         for i, probability in enumerate(probabilities):
-            outputFile.write("{0:>2}: probabilitate = {1}\n".format(i, probability))
+            outputFile.write("{0:>2}: probabilitate = {1}\n".format(i+1, probability))
             
     def printProbabilityIntervals(self, probabilityIntervals, outputFile:TextIOWrapper):   
         for value in probabilityIntervals:
@@ -135,16 +134,18 @@ class Algorithm:
                     self.printProbabilityIntervals(probabilityIntervals, outputFile)
                     outputFile.write("\n")
                 
+                chromosomesToSelect = self.POPULATION_SIZE
                 selectedChromosomes = [] 
                 if isElitist:
                     # daca este elitist pastram cel mai bun cromozon la fiecare pas
                     maxProbability = max(probabilities)
                     i = probabilities.index(maxProbability)
-                    selectedChromosomes.append(population[i])
+                    eliteChromosome = population[i]
+                    selectedChromosomes.append(eliteChromosome)
+                    chromosomesToSelect -= 1
                     if step == 1:
                         outputFile.write("Criteriu elitist: Selectam cromozomul {0}\n".format(i+1))
                 
-                chromosomesToSelect = self.CHROMOSOME_LENGTH - len(selectedChromosomes)
                 for i in range(chromosomesToSelect):
                     r = random()
                     # caut binar intervalul in care se afla r
@@ -164,7 +165,51 @@ class Algorithm:
                 if step == 1:
                     outputFile.write("\nDupa selectie\n")
                     self.printPopulation(population, outputFile)
+                    
+                    outputFile.write(f"\nProbabilitatea de incrucisare {self.CROSSOVER_PROBABILITY}\n")
+                
+                # ignor cromozonul elitist la incrucisare
+                toCrossover = []
+                unchanged = [eliteChromosome]
+                for i in range(1, self.POPULATION_SIZE):
+                    r = random()
+                    if r < self.CROSSOVER_PROBABILITY:
+                        # participa la incrucisare
+                        toCrossover.append((i, population[i]))
+                        if step == 1:
+                            outputFile.write("{0:>2}: random = {1} < {2} participa\n".format(i+1, round(r, 10), self.CROSSOVER_PROBABILITY))
+                    else:
+                        unchanged.append(population[i])
+                        if step == 1:
+                            outputFile.write("{0:>2}: random = {1}\n".format(i+1, round(r, 10)))
+                
+                population = unchanged
+                
+                # cat timp avem 2 cromozomi de incrucisat
+                while len(toCrossover) >= 2:
+                    # selectez 2 random si ii scot din populatie
+                    indexA, a = toCrossover[randint(0, len(toCrossover)-1)]
+                    toCrossover.remove((indexA, a))
+                    indexB, b = toCrossover[randint(0, len(toCrossover)-1)]
+                    toCrossover.remove((indexB, b))
+                    
+                    # adaug cromozonii rezultati dupa incrucisare
+                    crossoverPoint, mutatedA, mutatedB = self.crossoverChromosomes(a, b)
+                    population.append(mutatedA)
+                    population.append(mutatedB)
+                    
+                    if step == 1:
+                        outputFile.write("\nRecombinare dintre cromozonul {0} si cromozonul {1}:\n".format(indexA+1, indexB+1))
+                        outputFile.write(f"{self.toString(a)} {self.toString(b)} punct {str(crossoverPoint)}\n")
+                        outputFile.write(f"Rezultat {self.toString(mutatedA)} {self.toString(mutatedB)}\n")
 
+                if len(toCrossover) == 1:
+                    i, chromosome = toCrossover[0]
+                    population.append(chromosome)
+
+                if step == 1:
+                    outputFile.write("\nDupa recombinare\n")
+                    self.printPopulation(population, outputFile)
                 
                 
 
