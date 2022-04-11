@@ -67,8 +67,8 @@ class Algorithm:
         return [value / sumOfFunctionValues for value in functionValues], max(functionValues)
     
     # Returneaza o pereche de cromozomi din populatie luand in calcul valorile functiei
-    def selectPairOfChromosomes(self, population, selectionProbability):
-        return choices(population, weights=selectionProbability, k=2)
+    # def selectPairOfChromosomes(self, population, selectionProbability):
+    #     return choices(population, weights=selectionProbability, k=2)
 
     # Returneaza punctul de rupere si cromozonii rezultati prin incrucisarea a 2 cromozomi la un punct random 
     # (ia inceputul primului si finalul celui de-al doilea si invers)
@@ -173,8 +173,10 @@ class Algorithm:
                 
                 # ignor cromozonul elitist la incrucisare
                 toCrossover = []
-                unchanged = [eliteChromosome]
-                for i in range(1, self.POPULATION_SIZE):
+                unchanged = []
+                if isElitist:
+                    unchanged.append(eliteChromosome)
+                for i in range(len(unchanged), self.POPULATION_SIZE):
                     r = random()
                     if r < self.CROSSOVER_PROBABILITY:
                         # participa la incrucisare
@@ -228,10 +230,14 @@ class Algorithm:
                     outputFile.write("\nEvolutia maximului:\n")
                     outputFile.write(f"Step {step}: {maxFunctionValue}\n")
 
+                # pun inapoi cromozomul elitist
+                if isElitist:
+                    population = [eliteChromosome] + population[1:]
 
 
 alg = Algorithm("data.txt")
 alg.run("evolutie.txt")
+alg.run("evolutieFaraElitism.txt", isElitist=False)
 
 # TESTE
 # print(alg.getValue([0,0,0,0,0,1,1,1,0,1,0,0,1,0,0,1,1,1,0,0,0,1]))
