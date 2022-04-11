@@ -60,11 +60,11 @@ class Algorithm:
         a, b, c = self.FUNCTION_PARAMS
         return 1.0 * a * (x**2) + b * x + c
     
-    # Returneaza probabilitatea de selectie a fiecarui cromozon (suma probabilitatilor este 1)
+    # Returneaza probabilitatea de selectie a fiecarui cromozon (suma probabilitatilor este 1) si valoarea maxima a functiei
     def getPopulationSelectionProbability(self, population):
         functionValues = [self.getFunctionValue(self.getValue(chromosome)) for chromosome in population]
         sumOfFunctionValues = sum(functionValues)
-        return [value / sumOfFunctionValues for value in functionValues]
+        return [value / sumOfFunctionValues for value in functionValues], max(functionValues)
     
     # Returneaza o pereche de cromozomi din populatie luand in calcul valorile functiei
     def selectPairOfChromosomes(self, population, selectionProbability):
@@ -84,10 +84,11 @@ class Algorithm:
         modified = set()
         for i, chromosome in enumerate(population):
             for bit in range(self.CHROMOSOME_LENGTH):
-                if random() > self.MUTATION_PROBABILITY:
+                if random() < self.MUTATION_PROBABILITY:
                     # mutatie = inversam valoarea bitului
                     chromosome[bit] = 1 - chromosome[bit]
-                    modified.add(i)
+                    modified.add(i+1)
+        return modified
                     
     def toString(self, chromosome):
         return "".join([str(bit) for bit in chromosome])
@@ -97,7 +98,7 @@ class Algorithm:
             value = self.getValue(chromosome)
             outputFile.write("{0:>2}: {1:<25} x = {2:<10} f = {3}\n".format(i+1, self.toString(chromosome), round(value, 6), self.getFunctionValue(value)))
             
-    def printPopulationSelectionProbabilit(self, probabilities, outputFile:TextIOWrapper):
+    def printPopulationSelectionProbability(self, probabilities, outputFile:TextIOWrapper):
         for i, probability in enumerate(probabilities):
             outputFile.write("{0:>2}: probabilitate = {1}\n".format(i+1, probability))
             
@@ -116,11 +117,13 @@ class Algorithm:
             for step in range(1, self.NUMBER_OF_STEPS):
                 # Generam noua populatie
                 # probabilitatea e calculata in functie de suma totala a cromozonilor
-                probabilities = self.getPopulationSelectionProbability(population)
+                probabilities, maxFunctionValue = self.getPopulationSelectionProbability(population)
                 if step == 1:
                     outputFile.write("Probabilitati selectie\n")
-                    self.printPopulationSelectionProbabilit(probabilities, outputFile)
+                    self.printPopulationSelectionProbability(probabilities, outputFile)
                     outputFile.write("\n")
+                else:
+                    outputFile.write(f"Step {step}: {maxFunctionValue}\n")
                     
                 # intervalele sunt sume partiale pe probabilitati, suma totala este mereu 1 pentru ca sunt procente
                 currentSum = 0.0
@@ -210,11 +213,22 @@ class Algorithm:
                 if step == 1:
                     outputFile.write("\nDupa recombinare\n")
                     self.printPopulation(population, outputFile)
+                    
+                    outputFile.write(f"\nProbabilitatea de mutatie pentru fiecare gena {self.MUTATION_PROBABILITY}\n")
                 
-                
+                mutatedChromosomes = self.mutateChromosomes(population)
+                if step == 1:
+                    outputFile.write("Au fost modificati cromozomii:\n")
+                    for i in mutatedChromosomes:
+                        outputFile.write(str(i) + "\n")
+                        
+                    outputFile.write("\nDupa mutatie\n")
+                    self.printPopulation(population, outputFile)
+                    
+                    outputFile.write("\nEvolutia maximului:\n")
+                    outputFile.write(f"Step {step}: {maxFunctionValue}\n")
 
-                
-            
+
 
 alg = Algorithm("data.txt")
 alg.run("evolutie.txt")
